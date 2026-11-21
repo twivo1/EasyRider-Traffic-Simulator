@@ -5,21 +5,28 @@
 #include "../core/SimulationObject.h"
 #include "../core/RoadGeometry.h"
 
+quint64 CarRenderer::keyOf(const SimulationObject* o) {
+    if (const auto* car = dynamic_cast<const Car*>(o); car && car->id() >= 0)
+        return (quint64(car->id()) << 1) | 1u;          // id (nieparzyste — rozłączne z adresami)
+    return quint64(reinterpret_cast<quintptr>(o));     // obiekt bez id: adres (wyrównany, parzysty)
+}
+
 void CarRenderer::capture(const SimulationEngine* engine) {
-    std::unordered_map<const void*,Frames> next;
+    std::unordered_map<quint64,Frames> next;
     for(const auto& object:engine->objects()) {
         DisplayPose pose;pose.center=object->boundingRect().center();pose.angle=object->headingAngle();
         const auto* car=dynamic_cast<const Car*>(object.get());
         if(car && car->circling()) {   // krzywe wjazdu/zjazdu nie leżą na okręgu
             pose.ring=true;pose.ringCenter=QPointF(kVLeft[car->ringVI()]+kRoadW/2,kHTop[car->ringHI()]+kRoadW/2);
         }
-        auto it=m_frames.find(object.get());
-        next[object.get()]={it!=m_frames.end() && frameAge()<100 ? it->second.after:pose,pose};
+        const quint64 key=keyOf(object.get());
+        auto it=m_frames.find(key);
+        next[key]={it!=m_frames.end() && frameAge()<100 ? it->second.after:pose,pose};
     }
     m_frames.swap(next);m_clock.restart();
 }
 DisplayPose CarRenderer::displayedPose(const SimulationObject* object, double alpha) const {
-    const auto found=m_frames.find(object);
+    const auto found=m_frames.find(keyOf(object));
     if(found!=m_frames.end()) return betweenPoses(found->second.before,found->second.after,alpha);
     DisplayPose pose;
     pose.center=object->boundingRect().center();pose.angle=object->headingAngle();
@@ -36,12 +43,13 @@ void CarRenderer::drawCars(QPainter& p, const SimulationEngine* engine,
     if (!engine) return;
     constexpr double L = kCarL, W = kCarW;
     if(alpha<0) alpha=presentationAlpha();
-    std::unordered_map<const void*,int> liveColours;
+    std::unordered_map<quint64,int> liveColours;
     const QColor colours[]={th.carBody,QColor("#D6CBB5"),QColor("#B6C5AE"),QColor("#C99983"),QColor("#E0E4DF")};
     for (const auto& obj : engine->objects()) {
-        auto colour=m_colourIds.find(obj.get());
+        const quint64 key=keyOf(obj.get());
+        auto colour=m_colourIds.find(key);
         int colourId=colour==m_colourIds.end() ? (m_nextColour++%5) : colour->second;
-        liveColours[obj.get()]=colourId;
+        liveColours[key]=colourId;
         p.save();
         const auto pose=displayedPose(obj.get(),alpha);
         p.translate(pose.center);

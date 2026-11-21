@@ -41,9 +41,12 @@ inline DisplayPose betweenPoses(DisplayPose a,DisplayPose b,double t) {
 }
 class CarRenderer {
     struct Frames { DisplayPose before,after; };
-    std::unordered_map<const void*,Frames> m_frames;
+    /// Klucz = stałe id auta (nie adres: zwolniony adres bywa przydzielany nowemu
+    /// autu w tym samym kroku — wtedy nowe auto interpolowałoby się od pozy starego).
+    static quint64 keyOf(const SimulationObject* o);
+    std::unordered_map<quint64,Frames> m_frames;
     QElapsedTimer m_clock;
-    mutable std::unordered_map<const void*,int> m_colourIds;
+    mutable std::unordered_map<quint64,int> m_colourIds;
     mutable int m_nextColour=0;
 public:
     /// Poza rysowana dla obiektu przy danym alpha (diagnostyka: zgodność render–silnik).

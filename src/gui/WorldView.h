@@ -27,5 +27,12 @@ inline QTransform fitted(QRectF viewport, QRectF world=bounds()) {
     double z=fit(viewport.size(), world);
     QTransform t;t.translate(viewport.center().x(),viewport.center().y());t.scale(z,z);t.translate(-world.center().x(),-world.center().y());return t;
 }
+/// Logiczna kanwa świata — drogi kończą się dokładnie na jej krawędziach.
+inline QRectF canvas() { return QRectF(0, 0, kCanvasW, kCanvasH); }
+/// Skala COVER: najmniejsza, przy której kanwa pokrywa cały viewport (bez pustych pasów).
+inline double cover(QSizeF viewport) {
+    if (viewport.width() <= 0 || viewport.height() <= 0) return 1.0;
+    return std::max(viewport.width() / kCanvasW, viewport.height() / kCanvasH);
+}
 inline QTransform camera(double zoom,QPointF pan) { QTransform t;t.scale(zoom,zoom);t.translate(-pan.x(),-pan.y());return t; }
 }

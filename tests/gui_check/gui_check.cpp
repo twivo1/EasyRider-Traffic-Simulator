@@ -31,6 +31,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QWindow>
+#include <QWheelEvent>
 #include <cmath>
 #include <map>
 #include <unordered_map>
@@ -40,6 +41,9 @@
 #include "gui/StartScreen.h"
 #include "gui/SideMenu.h"
 #include "gui/Theme.h"
+#include "gui/MapRenderer.h"
+#include "gui/RoutePicker.h"
+#include <optional>
 #include "nav/RouteManager.h"
 #include "nav/DynamicPathfinder.h"
 #include "nav/TrafficAnalyzer.h"
@@ -240,6 +244,27 @@ struct Onion {
     void save(const QString& name) { if (!acc.isNull()) acc.save(outDir + "/" + name + ".png"); }
 };
 
+/// Klik w znacznik punktu trasy tak jak użytkownik: jeśli punkt jest poza widokiem,
+/// najpierw zakładka przy krawędzi (odsłania kolejne punkty), potem klik w znacznik.
+bool clickEndpoint(SimulationView* view, int id) {
+    for (int k = 0; k < 18; ++k) {
+        const RoutePicker::Layout l = view->pickerLayout();
+        const RoutePicker::Marker* m = nullptr;
+        for (const auto& mm : l.markers) if (mm.cpId == id) m = &mm;
+        if (!m) return false;
+        if (m->visible && m->selectable) {
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, m->center.toPoint());
+            QTest::qWait(120);
+            return true;
+        }
+        bool clicked = false;
+        for (const auto& t : l.tabs) if (t.side == m->offSide) {
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, t.rect.center().toPoint()); QTest::qWait(60); clicked = true; break; }
+        if (!clicked) return false;
+    }
+    return false;
+}
+
 Car* placeCar(SimulationEngine* e, Direction d, int road, double along, int intent) {
     QPointF tl;
     switch (d) {
@@ -254,7 +279,266 @@ Car* placeCar(SimulationEngine* e, Direction d, int road, double along, int inte
     return c;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//  Tryb UI (GUICHECK_UI=1): kamera, viewport, wybór punktów trasy
+// ═══════════════════════════════════════════════════════════════════
+struct ViewMetrics { double barL, barR, barT, barB, zoom, sx, sy; QSize view; };
+ViewMetrics viewMetrics(SimulationView* v) {
+    const QTransform T = v->worldTransform();
+    const QRectF C(0, 0, kCanvasW, kCanvasH);                  // logiczna kanwa świata
+    const QRectF V = T.inverted().mapRect(QRectF(v->rect())); // widoczny wycinek świata
+    const double z = T.m11();
+    return { std::max(0.0, C.left() - V.left()) * z, std::max(0.0, V.right() - C.right()) * z,
+             std::max(0.0, C.top() - V.top()) * z, std::max(0.0, V.bottom() - C.bottom()) * z,
+             z, T.m11(), T.m22(), v->size() };
+}
+QString fmtM(const ViewMetrics& m) {
+    return QString("widok %1×%2, zoom %3 (sx=%4 sy=%5), puste pasy L/P/G/D = %6/%7/%8/%9 px")
+        .arg(m.view.width()).arg(m.view.height()).arg(m.zoom, 0, 'f', 4).arg(m.sx, 0, 'f', 4).arg(m.sy, 0, 'f', 4)
+        .arg(m.barL, 0, 'f', 1).arg(m.barR, 0, 'f', 1).arg(m.barT, 0, 'f', 1).arg(m.barB, 0, 'f', 1);
+}
+void wheel(SimulationView* v, QPointF at, int delta) {
+    QWheelEvent ev(at, v->mapToGlobal(at), QPoint(), QPoint(0, delta), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    QApplication::sendEvent(v, &ev);
+}
+void ctrlDrag(SimulationView* v, QPoint from, QPoint to) {
+    QTest::mousePress(v, Qt::LeftButton, Qt::ControlModifier, from);
+    const int steps = 12;
+    for (int i = 1; i <= steps; ++i) QTest::mouseMove(v, from + (to - from) * i / steps, 5);
+    QTest::mouseRelease(v, Qt::LeftButton, Qt::ControlModifier, to);
+}
+#ifndef GUICHECK_HAS_MARKER_API
+#define GUICHECK_HAS_MARKER_API 0
+#endif
+
 } // namespace
+
+int runUiChecks(MainWindow& w, SimulationView* view, RouteManager* rm, const QString& dir,
+                std::function<void(const QString&)> say) {
+    int fails = 0;
+    auto check = [&](bool ok, const QString& what) { say(QString("  [%1] %2").arg(ok ? "OK" : "BŁĄD").arg(what)); if (!ok) ++fails; };
+    auto* side = w.findChild<SideMenu*>();
+    const QSize sizes[] = { {1280, 720}, {1536, 864}, {1920, 1080} };
+    for (QSize sz : sizes) {
+        w.showNormal(); w.resize(sz); QTest::qWait(400);
+        for (int panelOpen = 0; panelOpen < 2; ++panelOpen) {
+            if (side && side->isOpen() != bool(panelOpen)) { side->toggle(); QTest::qWait(300); }
+            const QString tag = QString("%1x%2-%3").arg(sz.width()).arg(sz.height()).arg(panelOpen ? "panel" : "bezpanelu");
+            say(QString("Okno żądane %1×%2, faktyczne %3×%4, panel %5").arg(sz.width()).arg(sz.height())
+                    .arg(w.width()).arg(w.height()).arg(panelOpen ? "otwarty" : "zwinięty"));
+            ViewMetrics m = viewMetrics(view);
+            say("  domyślnie: " + fmtM(m));
+            check(std::abs(m.sx - m.sy) < 1e-9, "skala jednakowa w X i Y (brak deformacji)");
+            check(m.barL + m.barR + m.barT + m.barB < 0.5, "brak pustych pasów w widoku domyślnym");
+            shot(w, "ui-" + tag + "-default");
+            // Maksymalne oddalenie
+            for (int i = 0; i < 25; ++i) wheel(view, QPointF(view->width() / 2.0, view->height() / 2.0), -120);
+            QTest::qWait(150);
+            m = viewMetrics(view);
+            say("  max oddalenie: " + fmtM(m));
+            check(m.barL + m.barR + m.barT + m.barB < 0.5, "brak pustych pasów przy maksymalnym oddaleniu");
+            if (panelOpen == 0) shot(w, "ui-" + tag + "-zoomout");
+            // Przybliżenie pod kursorem (punkt świata pod kursorem nie może uciec)
+            const QPointF cur(view->width() * 0.3, view->height() * 0.4);
+            for (int k = 0; k < 3; ++k) {
+                const QPointF wb = view->worldTransform().inverted().map(cur);
+                wheel(view, cur, 120); QTest::qWait(30);
+                const QPointF wa = view->worldTransform().inverted().map(cur);
+                const double err = QLineF(wb, wa).length() * view->worldTransform().m11();
+                const ViewMetrics mm = viewMetrics(view);
+                const bool clamped = mm.barL + mm.barR + mm.barT + mm.barB < 0.5;
+                check(err < 0.6 || !clamped, QString("zoom pod kursorem, krok %1: przesunięcie punktu pod kursorem %2 px").arg(k + 1).arg(err, 0, 'f', 2));
+            }
+            // Przeciąganie Ctrl+LPM we wszystkie strony, daleko poza mapę
+            const QPoint c(view->width() / 2, view->height() / 2);
+            const QPoint dirs[4] = { {3000, 0}, {-3000, 0}, {0, 2000}, {0, -2000} };
+            const char* names[4] = { "w prawo", "w lewo", "w dół", "w górę" };
+            for (int d = 0; d < 4; ++d) {
+                ctrlDrag(view, c, c + dirs[d]); QTest::qWait(60);
+                const ViewMetrics mm = viewMetrics(view);
+                check(mm.barL + mm.barR + mm.barT + mm.barB < 0.5,
+                      QString("pan %1 (zoom %2): kamera w granicach, pasy %3/%4/%5/%6 px").arg(names[d]).arg(mm.zoom, 0, 'f', 3)
+                          .arg(mm.barL, 0, 'f', 1).arg(mm.barR, 0, 'f', 1).arg(mm.barT, 0, 'f', 1).arg(mm.barB, 0, 'f', 1));
+                if (panelOpen == 0 && sz.width() == 1536) shot(w, QString("ui-%1-pan-%2").arg(tag).arg(d));
+            }
+            // Ponowny zoom-out (powrót do skali minimalnej) i pan w skrajne położenia
+            for (int i = 0; i < 25; ++i) wheel(view, QPointF(c), -120);
+            for (int d = 0; d < 4; ++d) { ctrlDrag(view, c, c + dirs[d]); QTest::qWait(40); }
+            m = viewMetrics(view);
+            check(m.barL + m.barR + m.barT + m.barB < 0.5, "skala minimalna + skrajne położenie: brak pustych pasów");
+        }
+    }
+    // Maksymalizacja
+    w.showMaximized(); QTest::qWait(600);
+    { const ViewMetrics m = viewMetrics(view); say("Zmaksymalizowane: " + fmtM(m));
+      check(m.barL + m.barR + m.barT + m.barB < 0.5, "maksymalizacja: brak pustych pasów"); shot(w, "ui-maximized"); }
+    w.showNormal(); w.resize(1536, 864); QTest::qWait(400);
+    if (side && side->isOpen()) { side->toggle(); QTest::qWait(300); }
+
+    // ── Znaczniki wyboru trasy ──────────────────────────────────────────
+    auto* routeBtn = w.findChild<QPushButton*>("routeBtn");
+    const auto& cps = rm->checkpoints();
+    // Niezależnie wyliczone sygnalizatory (MapRenderer + bieżąca transformacja).
+    auto signalRects = [&]() {
+        std::vector<QRectF> r;
+        for (const QRectF& wr : MapRenderer::signalHeadRects(view->engine())) r.push_back(view->worldTransform().mapRect(wr));
+        return r;
+    };
+    auto shapeOf = [&](const RoutePicker::Marker& m, RoutePicker::Stage st) {
+        const bool circle = st == RoutePicker::Stage::Start || m.isStart;
+        const double half = circle ? RoutePicker::kRadius + 3 + 2 : RoutePicker::kSquare / 2 + 2 + 3;  // z obwódką i hoverem
+        return QRectF(m.center.x() - half, m.center.y() - half, 2 * half, 2 * half);
+    };
+    // Kontrola układu: sygnalizatory, nakładanie hitboxów, widok, kształt ⊂ hitbox, konflikty.
+    auto auditLayout = [&](const QString& ctx) {
+        const RoutePicker::Layout l = view->pickerLayout();
+        const auto st = view->routePickStage();
+        const std::vector<QRectF> sig = signalRects();
+        const QRectF vr(QPointF(0, 0), QSizeF(view->size()));
+        int onSignal = 0, hitOverlap = 0, outside = 0, notCovered = 0, conflicts = 0, visible = 0, off = 0, labelOnSignal = 0;
+        for (size_t i = 0; i < l.markers.size(); ++i) {
+            const auto& m = l.markers[i];
+            if (!m.visible) { if (m.selectable) off++; continue; }
+            visible++;
+            if (m.conflict) conflicts++;
+            const QRectF sh = shapeOf(m, st);
+            for (const QRectF& s2 : sig) if (sh.intersects(s2)) { onSignal++; break; }
+            if (!m.label.isEmpty()) for (const QRectF& s2 : sig) if (m.label.intersects(s2)) { labelOnSignal++; break; }
+            if (m.selectable) {
+                if (!vr.contains(m.hit)) outside++;
+                if (!m.hit.contains(QRectF(m.center.x() - RoutePicker::kRadius, m.center.y() - RoutePicker::kRadius, 2 * RoutePicker::kRadius, 2 * RoutePicker::kRadius))) notCovered++;
+                for (size_t j = i + 1; j < l.markers.size(); ++j)
+                    if (l.markers[j].visible && l.markers[j].selectable && m.hit.intersects(l.markers[j].hit)) hitOverlap++;
+            }
+        }
+        int tabbed = 0; for (const auto& t : l.tabs) tabbed += t.count;
+        check(onSignal == 0 && labelOnSignal == 0, ctx + QString(": znaczniki/etykieta na sygnalizatorach = %1/%2").arg(onSignal).arg(labelOnSignal));
+        check(hitOverlap == 0, ctx + QString(": nakładające się hitboxy = %1").arg(hitOverlap));
+        check(outside == 0 && notCovered == 0, ctx + QString(": hitbox poza widokiem = %1, kształt poza hitboxem = %2").arg(outside).arg(notCovered));
+        check(conflicts == 0, ctx + QString(": znaczniki bez wolnego miejsca = %1").arg(conflicts));
+        for (const auto& m : l.markers) if (m.visible && m.conflict)
+            say(QString("     ↳ konflikt cp %1 (krawędź %2, droga %3) kotwica (%4,%5) zoom %6")
+                    .arg(m.cpId).arg(cps[m.cpId].edge).arg(cps[m.cpId].roadIdx).arg(m.anchor.x(), 0, 'f', 1).arg(m.anchor.y(), 0, 'f', 1).arg(view->zoom(), 0, 'f', 2));
+        check(tabbed == off, ctx + QString(": widocznych %1, poza widokiem %2, w zakładkach %3").arg(visible).arg(off).arg(tabbed));
+        return l;
+    };
+    auto markerById = [&](int id) -> std::optional<RoutePicker::Marker> {
+        for (const auto& m : view->pickerLayout().markers) if (m.cpId == id) return m;
+        return std::nullopt;
+    };
+    // Doprowadza znacznik do widoku przez klikanie zakładek (jak użytkownik).
+    // Limit kliknięć = liczba punktów ukrytych po danej stronie + 2 (każde kliknięcie
+    // odsłania kolejny najbliższy punkt); cykl bez postępu kończy się porażką.
+    auto bringIntoView = [&](int id) {
+        for (int k = 0; k < 18; ++k) {
+            auto m = markerById(id);
+            if (!m) return false;
+            if (m->visible) return true;
+            for (const auto& t : view->pickerLayout().tabs)
+                if (t.side == m->offSide) { QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, t.rect.center().toPoint()); QTest::qWait(60); break; }
+        }
+        auto m = markerById(id); return m && m->visible;
+    };
+    auto clickMarker = [&](int id) {
+        if (!bringIntoView(id)) return false;
+        auto m = markerById(id);
+        QTest::mouseMove(view, m->center.toPoint()); QTest::qWait(40);
+        QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, m->center.toPoint()); QTest::qWait(120);
+        return true;
+    };
+    // Kontrola układu przy różnych rozmiarach, zoomach i położeniach kamery.
+    for (QSize sz : { QSize(1280, 720), QSize(1536, 864), QSize(1920, 1080) }) {
+        w.resize(sz); QTest::qWait(300);
+        if (routeBtn) routeBtn->click();
+        QTest::qWait(250);
+        const QString tag = QString("%1x%2").arg(view->width()).arg(view->height());
+        auditLayout("START " + tag + " skala min.");
+        shot(w, QString("ui-pick-start-%1").arg(sz.width()));
+        for (int zstep : { 3, 7 }) {
+            for (int i = 0; i < zstep; ++i) wheel(view, QPointF(view->width() * 0.5, view->height() * 0.5), 120);
+            QTest::qWait(60);
+            auditLayout(QString("START %1 zoom %2").arg(tag).arg(view->zoom(), 0, 'f', 2));
+            // Każdy punkt osiągalny: zakładki muszą doprowadzić go do widoku.
+            int reachable = 0;
+            for (const auto& cp : cps) {
+                if (bringIntoView(cp.id)) { reachable++; continue; }
+                auto m = markerById(cp.id); QString tabs;
+                for (const auto& t : view->pickerLayout().tabs) tabs += QString(" [%1:%2]").arg(t.side).arg(t.count);
+                say(QString("     ↳ nieosiągalny cp %1 (krawędź %2): offSide %3, kotwica (%4,%5), widok %6×%7, zakładki%8")
+                        .arg(cp.id).arg(cp.edge).arg(m ? m->offSide : -9).arg(m ? m->anchor.x() : 0, 0, 'f', 1).arg(m ? m->anchor.y() : 0, 0, 'f', 1)
+                        .arg(view->width()).arg(view->height()).arg(tabs));
+            }
+            check(reachable == (int)cps.size(), QString("START %1 zoom %2: osiągalne przez zakładki %3/%4").arg(tag).arg(view->zoom(), 0, 'f', 2).arg(reachable).arg(cps.size()));
+            auditLayout(QString("START %1 zoom %2 po przesunięciach").arg(tag).arg(view->zoom(), 0, 'f', 2));
+            if (zstep == 3 && sz.width() == 1280) shot(w, "ui-pick-zoomed-tabs");
+            for (int i = 0; i < 12; ++i) wheel(view, QPointF(view->width() * 0.5, view->height() * 0.5), -120);
+        }
+        QTest::keyClick(view, Qt::Key_Escape); QTest::qWait(150);
+    }
+    w.resize(1536, 864); QTest::qWait(300);
+
+    // Wybór START i CEL z każdej z 4 stron (kliknięcia myszą w znaczniki).
+    const int startIds[4] = { 3, 12, 18, 29 };   // lewa, prawa, góra, dół
+    const int endIds[4]   = { 13, 2, 27, 21 };   // prawa, lewa, dół, góra
+    for (int k = 0; k < 4; ++k) {
+        if (routeBtn) routeBtn->click();
+        QTest::qWait(200);
+        // Klik 3 px poza hitboxem nie może niczego wybrać.
+        if (auto m = markerById(startIds[k]); m && m->visible) {
+            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, QPoint(int(m->hit.right() + 3), int(m->hit.center().y())));
+            QTest::qWait(60);
+            check(view->routePickStage() == RoutePicker::Stage::Start, QString("klik obok znacznika %1 nie wybiera punktu").arg(startIds[k]));
+        }
+        // Klik w sygnalizator nie wybiera punktu.
+        { const auto sig = signalRects(); int tried = 0;
+          for (const QRectF& r : sig) if (QRectF(QPointF(0,0), QSizeF(view->size())).contains(r.center()) && tried < 3) {
+              QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, r.center().toPoint()); QTest::qWait(30); tried++; }
+          check(view->routePickStage() == RoutePicker::Stage::Start, "klik w sygnalizator nie wybiera punktu"); }
+        check(clickMarker(startIds[k]), QString("START %1: znacznik osiągalny i kliknięty").arg(startIds[k]));
+        check(view->routePickStage() == RoutePicker::Stage::End, QString("START %1 → etap CEL").arg(startIds[k]));
+        auditLayout(QString("CEL po starcie %1").arg(startIds[k]));
+        if (k == 0) { // hover na znaczniku celu — zrzut stanu najechania
+            if (auto m = markerById(endIds[k]); m && m->visible) { QTest::mouseMove(view, m->center.toPoint()); QTest::qWait(250); }
+            shot(w, "ui-pick-end-hover");
+        }
+        { auto m = markerById(startIds[k]); check(m && m->isStart && !m->label.isEmpty(), "wybrany START oznaczony etykietą START");
+          if (m) say(QString("     ↳ START %1: widoczny %2, środek (%3,%4), kotwica (%5,%6), etykieta %7, widok %8×%9").arg(startIds[k]).arg(m->visible)
+                .arg(m->center.x(),0,'f',1).arg(m->center.y(),0,'f',1).arg(m->anchor.x(),0,'f',1).arg(m->anchor.y(),0,'f',1)
+                .arg(m->label.isEmpty() ? "BRAK" : "ok").arg(view->width()).arg(view->height())); }
+        check(clickMarker(endIds[k]), QString("CEL %1: znacznik osiągalny i kliknięty").arg(endIds[k]));
+        QTest::qWait(150);
+        const Route& r = rm->currentRoute();
+        const bool ok = rm->isNavigating() && !r.empty() && r.front().cpId == startIds[k] && r.back().cpId == endIds[k];
+        check(ok, QString("nawigacja %1→%2 uruchomiona z wybranych punktów").arg(startIds[k]).arg(endIds[k]));
+        check(!view->isRouteSelectionMode(), "po wyborze CEL znaczniki ukryte");
+        if (k == 0) shot(w, "ui-pick-navigating");
+        QTest::keyClick(view, Qt::Key_Escape); QTest::qWait(150);
+    }
+    // ESC w trakcie wyboru i ponowny start procesu
+    if (routeBtn) routeBtn->click();
+    QTest::qWait(200); clickMarker(5); QTest::qWait(100);
+    QTest::keyClick(view, Qt::Key_Escape); QTest::qWait(150);
+    check(!view->isRouteSelectionMode() && view->routePickStage() == RoutePicker::Stage::None, "ESC w etapie CEL anuluje wybór i usuwa znaczniki");
+    shot(w, "ui-pick-after-esc");
+    if (routeBtn) routeBtn->click();
+    QTest::qWait(200);
+    check(view->routePickStage() == RoutePicker::Stage::Start, "ponowne „Wyznacz trasę” zaczyna od etapu START");
+    // Pełny przejazd trasą wybraną znacznikami (×4)
+    {
+        bool fin = false, fail = false;
+        auto c1 = QObject::connect(rm, &RouteManager::navigationFinished, [&] { fin = true; });
+        auto c2 = QObject::connect(rm, &RouteManager::navigationFailed, [&] { fail = true; });
+        clickMarker(20); clickMarker(9);
+        if (auto* sp = w.findChild<QSlider*>("speedSlider")) sp->setValue(8);
+        QElapsedTimer t; t.start();
+        while (!fin && !fail && t.elapsed() < 90000) QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        check(fin, QString("SmartCar dojechał trasą 20→9 wybraną znacznikami (%1)").arg(fin ? "dotarł" : fail ? "zgubił" : "timeout"));
+        if (auto* sp = w.findChild<QSlider*>("speedSlider")) sp->setValue(4);
+        QObject::disconnect(c1); QObject::disconnect(c2);
+    }
+    (void)dir;
+    return fails;
+}
 
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
@@ -287,6 +571,14 @@ int main(int argc, char** argv) {
     QTest::qWait(500);
     ck.pickRef(); ck.start();
     say(QString("Start: aut=%1").arg(ck.eng->objects().size()));
+    if (qEnvironmentVariableIsSet("GUICHECK_UI")) {
+        ck.begin("UI");
+        const int f = runUiChecks(w, view, rm, outDir, say);
+        ck.end();
+        say(QString("\nTESTY UI: %1").arg(f == 0 ? "WSZYSTKIE OK" : QString("BŁĘDÓW: %1").arg(f)));
+        QTest::qWait(300);
+        return f == 0 ? 0 : 1;
+    }
 
     const bool onlyJam = qEnvironmentVariableIsSet("GUICHECK_ONLY_JAM");
     auto* speed = w.findChild<QSlider*>("speedSlider");
@@ -326,11 +618,8 @@ int main(int argc, char** argv) {
         auto c2 = QObject::connect(rm, &RouteManager::navigationFailed, [&] { fail = true; });
         click("routeBtn");
         const auto& cps = rm->checkpoints();
-        auto clickCp = [&](int id) {
-            const QPoint p = view->worldTransform().map(cps[id].worldPos).toPoint();
-            QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, p); QTest::qWait(120);
-        };
-        clickCp(tp.a); clickCp(tp.b);
+        (void)cps;
+        clickEndpoint(view, tp.a); clickEndpoint(view, tp.b);
         if (!rm->isNavigating()) { say(QString("  trasa %1→%2: nawigacja NIE wystartowała").arg(tp.a).arg(tp.b)); ck.end(); QObject::disconnect(c1); QObject::disconnect(c2); continue; }
         const double pred = rm->routeCost(); const double t0 = ck.simTime;
         // Pierwszy węzeł trasy i planowany wyjazd z niego
@@ -419,7 +708,8 @@ int main(int argc, char** argv) {
         bool fin = false; auto c1 = QObject::connect(rm, &RouteManager::navigationFinished, [&] { fin = true; });
         click("routeBtn");
         const auto& rcps = rm->checkpoints();
-        for (int id : { 3, 11 }) { QTest::mouseClick(view, Qt::LeftButton, Qt::NoModifier, view->worldTransform().map(rcps[id].worldPos).toPoint()); QTest::qWait(120); }
+        (void)rcps;
+        for (int id : { 3, 11 }) clickEndpoint(view, id);
         bool throughJam = false;
         for (size_t k = 0; k + 1 < rm->currentRoute().size(); ++k) {
             const auto& A = rm->currentRoute()[k]; const auto& B = rm->currentRoute()[k + 1];

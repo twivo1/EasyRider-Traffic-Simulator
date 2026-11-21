@@ -154,6 +154,30 @@ void MapRenderer::drawRoundabout(QPainter& p, double cx, double cy,
  * Sygnalizatory poziome (lewo/prawo) i pionowe (góra/dół) świecą zgodnie ze
  * stanem świateł skrzyżowania. Kolory nie zależą od palety mapy.
  */
+namespace {
+/// Środki 4 sygnalizatorów skrzyżowania (vi,hi) — po jednym na pas wjazdowy.
+void signalCenters(int vi, int hi, QPointF out[4]) {
+    const double ix = kVLeft[vi], iy = kHTop[hi];
+    out[0] = QPointF(ix - 8, iy + kRoadW * 0.75);          // wjazd L2R (poziome)
+    out[1] = QPointF(ix + kRoadW + 8, iy + kRoadW * 0.25); // wjazd R2L (poziome)
+    out[2] = QPointF(ix + kRoadW * 0.25, iy - 8);          // wjazd T2B (pionowe)
+    out[3] = QPointF(ix + kRoadW * 0.75, iy + kRoadW + 8); // wjazd B2T (pionowe)
+}
+} // namespace
+
+std::vector<QRectF> MapRenderer::signalHeadRects(const SimulationEngine* engine) {
+    std::vector<QRectF> r;
+    if (!engine) return r;
+    for (int vi = 0; vi < kNumRoads; ++vi)
+        for (int hi = 0; hi < kNumRoads; ++hi) {
+            if (engine->intersectionAt(vi, hi).isRoundabout) continue;
+            QPointF c[4]; signalCenters(vi, hi, c);
+            for (const QPointF& q : c)
+                r.push_back(QRectF(q.x() - kSignalHalf, q.y() - kSignalHalf, 2 * kSignalHalf, 2 * kSignalHalf));
+        }
+    return r;
+}
+
 void MapRenderer::drawTrafficLight(QPainter& p, int vi, int hi,
                                     const SimulationEngine* engine,
                                     const MapTheme& th) const {
@@ -163,21 +187,21 @@ void MapRenderer::drawTrafficLight(QPainter& p, int vi, int hi,
                   default:return{240,80,68};}};
 
     const auto& st=engine->intersectionAt(vi,hi);
-    double ix=kVLeft[vi], iy=kHTop[hi];
 
     auto drawOne=[&](double x,double y,LightState s){
         // Obudowa
         p.setPen(QPen(QColor("#E0E1D9"), 0.8));
         p.setBrush(QColor(28,28,32));
-        p.drawRoundedRect(QRectF(x-5,y-5,10,10),2,2);
+        p.drawRoundedRect(QRectF(x-kSignalHalf,y-kSignalHalf,2*kSignalHalf,2*kSignalHalf),2,2);
         // Światło
         p.setPen(Qt::NoPen);
         p.setBrush(col(s));
         p.drawEllipse(QPointF(x,y),3.5,3.5);
     };
     // One signal per incoming lane; outgoing lanes need no duplicate signal.
-    drawOne(ix-8, iy+kRoadW*0.75, st.hLight);
-    drawOne(ix+kRoadW+8, iy+kRoadW*0.25, st.hLight);
-    drawOne(ix+kRoadW*0.25, iy-8, st.vLight);
-    drawOne(ix+kRoadW*0.75, iy+kRoadW+8, st.vLight);
+    QPointF c[4]; signalCenters(vi, hi, c);
+    drawOne(c[0].x(), c[0].y(), st.hLight);
+    drawOne(c[1].x(), c[1].y(), st.hLight);
+    drawOne(c[2].x(), c[2].y(), st.vLight);
+    drawOne(c[3].x(), c[3].y(), st.vLight);
 }

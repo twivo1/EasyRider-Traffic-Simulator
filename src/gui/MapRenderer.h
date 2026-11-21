@@ -1,6 +1,8 @@
 #pragma once
 #include <QPainter>
 #include "Theme.h"
+#include <vector>
+#include <QRectF>
 class SimulationEngine;
 
 /**
@@ -20,6 +22,10 @@ public:
                            const MapTheme& th) const;
     void drawRoundabouts(QPainter& p, const SimulationEngine* engine, const MapTheme& th) const;
     void drawSignals(QPainter& p, const SimulationEngine* engine, const MapTheme& th) const;
+    /// Prostokąty (świat) obudów wszystkich sygnalizatorów — jedno źródło prawdy
+    /// dla rysowania i dla układu znaczników wyboru trasy (nie mogą ich zasłaniać).
+    static std::vector<QRectF> signalHeadRects(const SimulationEngine* engine);
+    static constexpr double kSignalHalf = 5.0;  ///< Połowa boku obudowy sygnalizatora.
 private:
     /// Rysuje pojedyncze rondo (asfalt, wyspa, strzałki kierunku).
     void drawRoundabout(QPainter& p, double cx, double cy, const MapTheme& th) const;

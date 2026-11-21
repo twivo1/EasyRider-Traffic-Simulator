@@ -42,6 +42,7 @@ qt_add_executable(EasyRider
     src/gui/Theme.h
     src/gui/MapRenderer.h
     src/gui/MapRenderer.cpp
+    src/gui/RoutePicker.h src/gui/RoutePicker.cpp
     src/gui/CarRenderer.h
     src/gui/CarRenderer.cpp
     src/gui/OverlayRenderer.h
@@ -76,6 +77,7 @@ qt_add_executable(EasyRiderTests
     tests/TestPreviewView.h
     tests/TestPreviewView.cpp
     src/gui/MapRenderer.cpp
+    src/gui/RoutePicker.h src/gui/RoutePicker.cpp
     src/gui/CarRenderer.cpp
     tests/TestFramework.h
     tests/TestSuite.h
@@ -163,6 +165,7 @@ if(Qt6Test_FOUND)
         src/nav/VisualRouteTypes.h src/nav/VisualRouteBuilder.h src/nav/VisualRouteBuilder.cpp
         src/nav/RoutePolylineSanitizer.h src/nav/RoutePolylineSanitizer.cpp
         src/gui/Theme.h src/gui/MapRenderer.h src/gui/MapRenderer.cpp
+    src/gui/RoutePicker.h src/gui/RoutePicker.cpp
         src/gui/CarRenderer.h src/gui/CarRenderer.cpp
         src/gui/OverlayRenderer.h src/gui/OverlayRenderer.cpp
         src/gui/SimulationView.h src/gui/SimulationView.cpp

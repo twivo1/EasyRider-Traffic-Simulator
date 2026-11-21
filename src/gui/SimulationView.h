@@ -15,6 +15,7 @@
 #include "OverlayRenderer.h"
 #include "Theme.h"
 #include "WorldView.h"
+#include "RoutePicker.h"
 
 class SimulationEngine;
 
@@ -54,6 +55,16 @@ public:
 
     /// Włącza/wyłącza tryb wyboru trasy (pokazuje checkpointy).
     void setRouteSelectionMode(bool active);
+    /// Etap wyboru trasy: które punkty są wybieralne i który jest wybranym STARTEM.
+    void setRoutePickStage(RoutePicker::Stage stage, const std::vector<int>& selectable, int startId = -1);
+    RoutePicker::Stage routePickStage() const { return m_pickStage; }
+    /// Bieżący układ znaczników (ta sama funkcja co rysunek i hit-test).
+    RoutePicker::Layout pickerLayout() const;
+    /// Przesuwa kamerę do skrajnego położenia przy danej stronie widoku.
+    void panToSide(int side);
+    double zoom() const { return m_zoom; }
+    double minZoom() const;
+    static constexpr double kMaxZoom = 4.0;
     bool isRouteSelectionMode() const { return m_routeSelectMode; }
     /// Włącza/wyłącza nakładkę mapy korków (heatmapę).
     void setHeatmapEnabled(bool on);
@@ -84,12 +95,17 @@ protected:
 
 private:
     void clampPan();                          ///< Ogranicza przesunięcie do granic mapy.
-    int  hitCheckpoint(QPointF worldPos) const; ///< Zwraca indeks klikniętego checkpointu lub -1.
+    void updateHover(QPointF pos);            ///< Hover znaczników/zakładek, kursor, podpowiedź.
+    void setZoomAt(double zoom, QPointF screenPos); ///< Zoom pod kursorem + ograniczenia.
 
     SimulationEngine*        m_engine = nullptr;
     std::vector<Checkpoint>  m_checkpoints;
     Route                    m_route;
     bool                     m_routeSelectMode = false;
+    RoutePicker::Stage       m_pickStage = RoutePicker::Stage::None;
+    std::vector<bool>        m_pickSelectable;
+    int                      m_pickStart = -1;
+    int                      m_hoverCp = -1, m_hoverTab = -1;
     bool                     m_heatmapEnabled  = false;
     QString                  m_statsText;
     MapTheme                 m_theme = defaultTheme();

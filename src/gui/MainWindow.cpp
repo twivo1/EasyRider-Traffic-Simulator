@@ -203,11 +203,15 @@ void MainWindow::onRouteRequested() {
     // Pokaż checkpointy na mapie.
     m_view->setCheckpoints(m_routeManager->checkpoints());
     m_view->setRouteSelectionMode(true);
+    // Etap 1/2: każdy punkt na krawędzi jest poprawnym wjazdem.
+    std::vector<int> starts;
+    for (const auto& cp : m_routeManager->checkpoints()) starts.push_back(cp.id);
+    m_view->setRoutePickStage(RoutePicker::Stage::Start, starts);
     m_sideMenu->setRouteSelectionMode(true);
     // Zamknij menu, by odsłonić mapę do wyboru checkpointów.
     if (m_sideMenu->isOpen()) m_sideMenu->toggle();
 
-    m_view->setStatsText("Kliknij punkt STARTOWY na krawędzi mapy");
+    m_view->setStatsText("");   // instrukcję rysuje widok (karta etapu)
     updateBottomStatus(ui->labelSimStatus->text(),
                        QString::fromUtf8("  Trasa: wybór punktu startowego"));
 }
@@ -237,7 +241,14 @@ void MainWindow::onCheckpointClicked(int cpId) {
 
         // Oznacz ten checkpoint wizualnie jako START.
         m_view->setCheckpointState(cpId, Checkpoint::UIState::IsStart);
-        m_view->setStatsText("Kliknij punkt KOŃCOWY na krawędzi mapy");
+        // Etap 2/2: tylko cele osiągalne z wybranego startu (istniejąca wyszukiwarka,
+        // zapytanie tylko do odczytu — logika A* bez zmian).
+        std::vector<int> ends;
+        const auto& cps = m_routeManager->checkpoints();
+        for (const auto& cp : cps)
+            if (cp.id != cpId && !m_routeManager->pathfinder().findRoute(cpId, cp.id, cps).empty())
+                ends.push_back(cp.id);
+        m_view->setRoutePickStage(RoutePicker::Stage::End, ends, cpId);
         updateBottomStatus(ui->labelSimStatus->text(),
                            QString::fromUtf8("  Trasa: wybór punktu końcowego"));
 
