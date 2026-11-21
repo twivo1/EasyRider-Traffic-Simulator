@@ -89,7 +89,7 @@ double clipArea(Poly subject, const Poly& clip) {
 struct PhaseStats {
     QString name; double simStart = 0, simEnd = 0; long frames = 0; int maxCars = 0;
     long renderMismatch = 0, renderOverlaps = 0, renderJumps = 0, renderHeadingJumps = 0, renderDiscont = 0;
-    long engineClipOverlaps = 0, missed = 0; double maxRenderStepExcess = 0, maxRenderHeadingStep = 0;
+    long engineClipOverlaps = 0, missed = 0, stalls = 0; double maxRenderStepExcess = 0, maxRenderHeadingStep = 0;
     MonitorStats mon; QStringList log, monLog;
 };
 
@@ -102,6 +102,7 @@ public:
     std::unordered_map<int, Prev> prev;          // klucz: id auta (adresy są ponownie używane)
     double nominalDt = 0.016;                     // 0,016 × tempo — krok jednego ticka MainWindow
     long missedTicks = 0;
+    QElapsedTimer wall;                           // czas rzeczywisty między krokami silnika
     QStringList globalLog;
 
     void pickRef() {
@@ -130,16 +131,21 @@ public:
         sampler.start(2);
     }
     void sample() {
-        if (!eng || refVi < 0) return;
+        if (!eng || refVi < 0 || !mon) return;   // monitor tworzy begin()
         const double pos = cyclePos();
         if (prevPos < 0) { prevPos = pos; return; }
         double dt = pos - prevPos; if (dt < 0) dt += 20.0;
         if (dt < 1e-9) return;                    // brak nowego kroku silnika
         prevPos = pos; simTime += dt; cur.frames++;
+        // Przestój UI > 100 ms między krokami: CarRenderer celowo nie interpoluje
+        // (capture(): frameAge() < 100) — ciągłości α=0 nie oceniamy, liczymy przestoje.
+        const qint64 gapMs = wall.isValid() ? wall.restart() : (wall.start(), 0);
+        const bool stall = gapMs > 95;
+        if (stall) cur.stalls++;
         mon->observe(*eng, dt);
         // Pominięty tick (próbkowanie nie nadążyło): ciągłości α=0 nie da się
         // ocenić — poprzednio zapamiętany stan jest starszy niż „before" renderera.
-        const bool missed = dt > nominalDt * 1.5;
+        const bool missed = dt > nominalDt * 1.5 || stall;
         if (missed) { cur.missed++; missedTicks++; }
         checkRender(dt, missed);
     }
@@ -282,6 +288,14 @@ int main(int argc, char** argv) {
     ck.pickRef(); ck.start();
     say(QString("Start: aut=%1").arg(ck.eng->objects().size()));
 
+    const bool onlyJam = qEnvironmentVariableIsSet("GUICHECK_ONLY_JAM");
+    auto* speed = w.findChild<QSlider*>("speedSlider");
+    QObject::connect(speed, &QSlider::valueChanged, [&](int v) {
+        static const double tbl[] = { 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0 };
+        ck.nominalDt = 0.016 * tbl[std::clamp(v - 1, 0, 7)];
+    });
+    int arrived = 0, failed = 0, firstTurnOk = 0, firstTurnChecked = 0, ringPasses = 0;
+    if (!onlyJam) {
     // ── 2. Ruch ogólny ×1 na mapie wygenerowanej przez ekran startowy ─
     ck.begin("Ruch ogólny ×1 (mapa z ekranu startowego, 45 aut)");
     ck.eng->setTargetCarCount(45);
@@ -291,11 +305,6 @@ int main(int argc, char** argv) {
     ck.end();
 
     // ── 3. ×4 suwakiem tempa ────────────────────────────────────────────
-    auto* speed = w.findChild<QSlider*>("speedSlider");
-    QObject::connect(speed, &QSlider::valueChanged, [&](int v) {
-        static const double tbl[] = { 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0 };
-        ck.nominalDt = 0.016 * tbl[std::clamp(v - 1, 0, 7)];
-    });
     ck.begin("Ruch ogólny ×4 (suwak), 45 aut");
     if (speed) speed->setValue(8);
     ck.waitSim(80, 40);
@@ -307,7 +316,6 @@ int main(int argc, char** argv) {
     struct Trip { int a, b; };
     const Trip trips[] = { {0,13},{24,7},{16,27},{11,5},{3,30},{20,9},{28,2},{14,22},{6,18},{31,12} };
     if (speed) speed->setValue(8);   // ×4, by przejazdy trwały krócej w czasie rzeczywistym
-    int arrived = 0, failed = 0, firstTurnOk = 0, firstTurnChecked = 0, ringPasses = 0;
     double sumPred = 0, sumAct = 0;
     int tripNo = 0;
     for (const Trip& tp : trips) {
@@ -369,6 +377,8 @@ int main(int argc, char** argv) {
     }
     say(QString("Nawigacja GUI: dotarło %1/10, zgubiło %2, pierwszy skręt zgodny %3/%4, przejazdów przez ronda %5, ETA Σprzewid. %6 s vs Σrzecz. %7 s")
             .arg(arrived).arg(failed).arg(firstTurnOk).arg(firstTurnChecked).arg(ringPasses).arg(sumPred, 0, 'f', 0).arg(sumAct, 0, 'f', 0));
+    } // !onlyJam
+    if (speed) speed->setValue(8);   // zator testowany przy ×4
 
     // ── 5. Reakcja na zatłoczenie: ciężki zator na trasie na wprost, trasa przez GUI ──
     auto resetScene = [&](std::vector<std::pair<int,int>> rbs) {
@@ -376,14 +386,14 @@ int main(int argc, char** argv) {
     };
     {
         resetScene({ {1,2},{2,5},{6,6} });          // brak ronda na korytarzu hi=3
-        ck.eng->spawnCarsOnMap(30); ck.eng->setTargetCarCount(30);
         ck.begin("Zator vs wybór trasy (GUI, ×4)");
-        ck.waitSim(6, 10);
         auto* e = ck.eng;
+        // Ruch tła dopływa od krawędzi (maintainTraffic) — zator stawiany na pustej
+        // drodze, więc żadne auto nie zostaje postawione na innym.
         auto freeAt = [&](QPointF topLeft, Direction d) {
             const bool h = dirIsHoriz(d);
             const QRectF r(topLeft, QSizeF(h ? kCarL : kCarW, h ? kCarW : kCarL));
-            for (const auto& o : e->objects()) if (o->boundingRect().intersects(r.adjusted(-8, -8, 8, 8))) return false;
+            for (const auto& o : e->objects()) if (o->boundingRect().intersects(r.adjusted(-2, -2, 2, 2))) return false;
             return true;
         };
         // Koszt trasy na wprost 3→11 PRZED zatorem (ten sam model co RouteManager).
@@ -400,7 +410,8 @@ int main(int argc, char** argv) {
             if (!freeAt(tl, Direction::L2R)) { skipped++; continue; }
             Car* c = placeCar(e, Direction::L2R, 3, x, 0); c->setHeld(true); jam.push_back(c); placed++;
         }
-        ck.waitSim(3, 10);
+        e->setTargetCarCount(30);
+        ck.waitSim(10, 15);
         ta.update();
         const double costAfter = pf.evaluateRoute(straight, cps);
         say(QString("Zator: postawiono %1 aut (pominięto zajęte miejsca: %2); koszt trasy na wprost 3→11: przed %3 s, po %4 s")
@@ -443,9 +454,11 @@ int main(int argc, char** argv) {
         on.save(file);
         ck.end();
     };
+    if (onlyJam) { say("(tylko faza zatoru)"); }
     const QPointF rc(kVLeft[4] + kRoadW / 2, kHTop[4] + kRoadW / 2);
     const QRectF rbCrop(rc.x() - 200, rc.y() - 180, 400, 360);
     const QRectF xCrop(kVLeft[3] - 190, kHTop[3] - 170, 450, 410);
+    if (!onlyJam) {
     mech("Skrzyżowanie z sygnalizacją: 8 aut, skręty i prosto", "10-intersection", xCrop, {}, [&](SimulationEngine* e) {
         const Direction ds[4] = { Direction::L2R, Direction::T2B, Direction::R2L, Direction::B2T };
         int k = 0; const QPointF xc(kVLeft[3] + kRoadW / 2, kHTop[3] + kRoadW / 2);
@@ -477,6 +490,7 @@ int main(int argc, char** argv) {
     }, 30, [&](SimulationEngine* e, double t) {
         if (t > 10) for (auto& o : e->objects()) if (auto* c = dynamic_cast<Car*>(o.get())) c->setHeld(false);
     });
+    } // !onlyJam
     resetScene({ {1,2},{2,5},{4,4},{6,3},{5,6} });
     ck.eng->spawnCarsOnMap(45); ck.eng->setTargetCarCount(45);
     shot(w, "15-final-state");
@@ -496,7 +510,7 @@ int main(int argc, char** argv) {
                 .arg(m.headingJumps).arg(m.engineCorrections).arg(m.offPath + m.illegalTransitions)
                 .arg(p.renderMismatch).arg(p.renderDiscont).arg(p.renderJumps).arg(p.renderHeadingJumps).arg(p.renderOverlaps)
                 .arg(p.maxRenderHeadingStep, 0, 'f', 1).arg(eng + ren == 0 ? "OK" : "BŁĘDY"));
-        say(QString("     (pominięte ticki próbkowania: %1 z %2)").arg(p.missed).arg(p.frames));
+        say(QString("     (pominięte ticki próbkowania: %1 z %2, w tym przestojów UI > 95 ms: %3)").arg(p.missed).arg(p.frames).arg(p.stalls));
         for (const auto& l : p.monLog.mid(0, 6)) say("     ↳ silnik: " + l);
         for (const auto& l : p.log.mid(0, 6)) say("     ↳ render: " + l);
     }

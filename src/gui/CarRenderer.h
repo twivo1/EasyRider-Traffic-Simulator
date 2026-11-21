@@ -22,16 +22,18 @@ struct DisplayPose {
 };
 inline DisplayPose betweenPoses(DisplayPose a,DisplayPose b,double t) {
     t=std::clamp(t,0.0,1.0);
-    if(a.ring!=b.ring || QLineF(a.center,b.center).length()>40) return b;
-    if(a.ring && a.ringCenter==b.ringCenter) {
+    if(QLineF(a.center,b.center).length()>40) return b;   // spawn / usunięcie — bez interpolacji
+    if(a.ring && b.ring && a.ringCenter==b.ringCenter) {
         double start=std::atan2(a.center.y()-a.ringCenter.y(),a.center.x()-a.ringCenter.x());
         double end=std::atan2(b.center.y()-b.ringCenter.y(),b.center.x()-b.ringCenter.x());
         double theta=start+std::remainder(end-start,2*3.141592653589793)*t;
         double r=QLineF(b.center,b.ringCenter).length();
         b.center=b.ringCenter+QPointF(std::cos(theta)*r,std::sin(theta)*r);
         b.angle=a.angle+std::remainder(b.angle-a.angle,360.0)*t;
-    } else if(!a.ring && std::abs(std::remainder(b.angle-a.angle,360.0))<30.0) {
-        // Ciągły ruch (także łuk skrętu / krzywa ronda): interpolacja pozycji i kursu.
+    } else if(std::abs(std::remainder(b.angle-a.angle,360.0))<30.0) {
+        // Ciągły ruch (łuk skrętu, krzywa wjazdu/zjazdu, przejście krzywa↔okrąg):
+        // interpolacja pozycji i kursu. Dawniej przy zmianie trybu (ring) zwracano
+        // od razu stan docelowy — przeskok o cały krok silnika (3,5 px przy ×4).
         b.center=a.center+(b.center-a.center)*t;
         b.angle=a.angle+std::remainder(b.angle-a.angle,360.0)*t;
     }

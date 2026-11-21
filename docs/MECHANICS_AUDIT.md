@@ -135,3 +135,53 @@ Wydajność (silnik, 1 krok 16 ms, Release): 30 aut 0,014 → 0,058 ms; 60 aut
   nakładania, ale to nie jest dowód dla dowolnych scenariuszy.
 * Kontrola stref konfliktu na skrzyżowaniach jest pośrednia (reguły świateł +
   tor przewidywany + obrysy); osobnego rezerwowania stref nie dodano.
+
+## Weryfikacja w uruchomionej aplikacji (2026-11-21)
+
+**Ograniczenie środowiska:** sesja nie miała narzędzi do sterowania pulpitem,
+więc GUI nie było obsługiwane ręcznie ani oglądane na żywo przez człowieka.
+Zamiast tego `EasyRiderGuiCheck` (cel CMake, wymaga Qt6::Test) uruchamia
+produkcyjne `MainWindow` w **widocznym oknie** (platforma `windows`, prawdziwy
+QTimer, RouteManager, paintEvent, interpolacja CarRenderer) i steruje nim
+zdarzeniami wejścia: przyciski ekranu startowego, suwak tempa, przycisk mapy
+korków, kliknięcia myszą w checkpointy (hit-test widoku). Zrzuty to piksele z
+ekranu (`QScreen::grabWindow`). Wyniki: `build/gui-check3/`, `build/gui-check-jam/`.
+
+Uruchomienie: `EasyRiderGuiCheck <katalog>` (≈10 min), `GUICHECK_ONLY_JAM=1` — tylko zator.
+
+Po każdym kroku silnika: SimMonitor + pozy RYSOWANE dla α ∈ {0,¼,½,¾,1} —
+zgodność α=1 z silnikiem, ciągłość, skoki kursu, nakładanie obrysów liczone
+niezależnie (przycinanie wielokątów Sutherland–Hodgman, nie SAT).
+
+| Faza (GUI) | czas sym. | silnik: naruszenia | render ≠ silnik | render: skoki / kurs / nakładania |
+|---|---|---|---|---|
+| Ruch ogólny ×1, 45 aut (mapa z ekranu startowego) | 40,7 s | 0 | 0 | 0 / 0 / 0 |
+| Ruch ogólny ×4 (suwak), 45 aut | 80,0 s | 0 | 0 | 0 / 0 / 0 |
+| 10 nawigacji przez kliknięcia (×4) | 468 s | 0 | 0 | 0 / 0 / 0 |
+| Zator 12 aut vs wybór trasy (×4) | 90,3 s | 0 | 0 | 0 / 0 / 0 |
+| Skrzyżowanie z sygnalizacją, 8 aut, skręty | 30 s | 0 | 0 | 0 / 0 / 0 |
+| Kolejka na czerwonym i ruszanie, 7 aut | 22 s | 0 | 0 | 0 / 0 / 0 |
+| Rondo: 1 auto / 7 aut z 4 wlotów / zablokowany zjazd | 72 s | 0 | 0 | 0 / 0 / 0 |
+
+Nawigacja przez GUI (3 przebiegi × 10 tras): **30/30 dotarło**, wyjazd z
+pierwszego węzła zgodny z planem 30/30, 16–19 przejazdów przez ronda na przebieg.
+
+**Błąd znaleziony i naprawiony:** `betweenPoses` nie interpolował przy zmianie
+trybu krzywa wjazdu/zjazdu ↔ okrąg — rysunek przeskakiwał o cały krok silnika
+(0,9 px przy ×1, 3,5 px przy ×4). Po poprawce: test deterministyczny R1/R4
+(ten sam CarRenderer, 90 s, 60 aut, ×1 i ×4) — 0 nieciągłości. Pozostałe
+zgłoszenia w GUI występowały wyłącznie przy przestojach UI > 100 ms (zrzuty
+ekranu harnessu), po których CarRenderer celowo nie interpoluje
+(`capture(): frameAge() < 100`) — przy osobnym liczeniu przestojów: 0.
+
+Zator (12 aut, droga hi=3): koszt trasy na wprost 46,8 → 59–60 s; w jednym
+przebiegu trasa omijała zator całkowicie (dojazd 67 s), w drugim tylko jeden
+z dwóch zatorowych odcinków (76 s) — ruch tła zależy od czasu rzeczywistego.
+To ograniczenie snapshotu: unieruchomione auta wyglądają jak zwykła kolejka.
+
+Walidacja tras na ziarnach spoza kalibracji (V1/V4, pętla jak MainWindow::tick):
+×1 30/30 i ×4 20/20 dotarło, pierwszy skręt 50/50; ETA zaniżona o 10,3% (×1)
+i 4,5% (×4), MAE ≈ 8,5 s na trasę — gorzej niż na ziarnach kalibracyjnych (−5%).
+
+Narzędzie GUI ma dostęp tylko do odczytu: `SimulationView::engine()`,
+`SimulationView::carRenderer()`, `CarRenderer::displayedPose()` (publiczne).

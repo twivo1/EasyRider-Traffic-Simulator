@@ -12,6 +12,7 @@
 #include "nav/TrafficAnalyzer.h"
 #include "nav/DynamicPathfinder.h"
 #include "nav/RouteManager.h"
+#include "gui/CarRenderer.h"
 
 #include <QElapsedTimer>
 #include <QCoreApplication>
@@ -1289,6 +1290,58 @@ Result Validate(const QString& id, double mult, int trips, unsigned seedBase) {
     return r;
 }
 
+/// R: ciągłość PREZENTACJI — ten sam CarRenderer co w aplikacji, capture() po
+/// każdym kroku silnika (bez przestojów UI). Dla każdego auta: poza rysowana przy
+/// α=0 musi kontynuować pozę z α=1 poprzedniego kroku, α=1 = stan silnika,
+/// a kroki między α nie mogą przekraczać kroku silnika.
+Result RenderContinuity(const QString& id, unsigned seed, double dtFrame) {
+    Result r; r.id = id; r.group = "R"; r.seed = seed; r.dynamic = true;
+    r.name = QString("Ciągłość renderu (CarRenderer), 60 aut, krok %1 s").arg(dtFrame, 0, 'f', 3);
+    Run run; run.dt = dtFrame; run.e.setSeed(seed);
+    run.e.setRoundabouts({ {1,2},{2,5},{4,4},{6,3},{5,6} });
+    run.e.spawnCarsOnMap(60); run.e.setTargetCarCount(60);
+    CarRenderer cr;
+    struct P { QPointF c; double a; QPointF ec; };
+    std::map<int, P> prev;
+    long disc = 0, mism = 0, jumps = 0; double maxDisc = 0;
+    for (long i = 0; i < long(90.0 / dtFrame); ++i) {
+        run.step();
+        cr.capture(&run.e);
+        for (const auto& o : run.e.objects()) {
+            const Car* c = dynamic_cast<const Car*>(o.get()); if (!c) continue;
+            DisplayPose p0 = cr.displayedPose(o.get(), 0.0), p1 = cr.displayedPose(o.get(), 1.0);
+            if (QLineF(p1.center, c->center()).length() > 1e-6) mism++;
+            auto it = prev.find(c->id());
+            if (it != prev.end()) {
+                const double d = QLineF(p0.center, it->second.c).length();
+                if (d > 1e-6) {
+                    disc++; maxDisc = std::max(maxDisc, d);
+                    if (r.violations.size() < 12)
+                        r.violations << QString("t=%1 car#%2 nieciągłość %3 px (ring=%4 circ=%5 man=%6 v=%7)")
+                                            .arg(run.t, 0, 'f', 2).arg(c->id()).arg(d, 0, 'f', 3).arg(c->isOnRing())
+                                            .arg(c->circling()).arg(c->inManeuver()).arg(c->speed(), 0, 'f', 0);
+                }
+                const double eng = QLineF(c->center(), it->second.ec).length();
+                DisplayPose last = p0;
+                for (double a : { 0.25, 0.5, 0.75, 1.0 }) {
+                    DisplayPose q = cr.displayedPose(o.get(), a);
+                    if (QLineF(q.center, last.center).length() > eng * 0.25 + 0.3) jumps++;
+                    last = q;
+                }
+            }
+            prev[c->id()] = { p1.center, p1.angle, c->center() };
+        }
+    }
+    r.ticks = run.tick; r.simTime = run.t; r.st = run.mon.stats(); r.cars = r.st.maxCars;
+    cleanStats(r.st, r.failures);
+    r.notes << QString("nieciągłości α=0: %1 (max %2 px), α=1≠silnik: %3, skoki między α: %4").arg(disc).arg(maxDisc, 0, 'f', 3).arg(mism).arg(jumps);
+    if (disc) r.failures << QString("render: %1 nieciągłości przy nowym kroku").arg(disc);
+    if (mism) r.failures << QString("render: %1 rozbieżności α=1 vs silnik").arg(mism);
+    if (jumps) r.failures << QString("render: %1 skoków między próbkami α").arg(jumps);
+    r.pass = r.failures.isEmpty();
+    return r;
+}
+
 // ── E: stabilność ────────────────────────────────────────────────────
 Result Esoak(const QString& id, const QString& name, unsigned seed, int cars, double seconds, double dt) {
     return runDynamic(id, "E", name, seed, long(seconds / dt),
@@ -1378,6 +1431,8 @@ std::vector<Scenario> allScenarios() {
     add("E3", "E", "70 aut, 300 s", [] { return Esoak("E3", "Zwiększone natężenie: 70 aut, 300 s", 44, 70, 300, kDt); });
     add("E4", "E", "Przyspieszona symulacja ×4", [] { return Esoak("E4", "Przyspieszona symulacja ×4 (dt=0,064 s), 40 aut", 45, 40, 240, 0.064); });
     add("E5/E6", "E", "Determinizm + pauza", E5E6);
+    add("R1", "R", "Ciągłość renderu ×1", [] { return RenderContinuity("R1", 81, 0.016); });
+    add("R4", "R", "Ciągłość renderu ×4", [] { return RenderContinuity("R4", 82, 0.064); });
     add("V1", "V", "Walidacja tras ×1", [] { return Validate("V1", 1.0, 30, 7100); });
     add("V4", "V", "Walidacja tras ×4", [] { return Validate("V4", 4.0, 20, 7300); });
     // S: stress bezpieczeństwa na wielu ziarnach (mapa z rondami i sygnalizacją).
