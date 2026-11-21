@@ -1,0 +1,75 @@
+/**
+ * @file groups.dox
+ * @brief Definicje grup tematycznych Doxygen używanych w projekcie.
+ *
+ * Grupy pomagają zorganizować dokumentację wokół roli kodu, a nie
+ * fizycznego umiejscowienia plików. Klasa może należeć do jednej grupy
+ * (przez tag ingroup w jej komentarzu) — w spisie pojawi się obok
+ * innych klas o pokrewnej odpowiedzialności.
+ */
+
+/**
+ * @defgroup simulation_grp Symulacja
+ * @brief Silnik świata: obiekty na drodze, fizyka ruchu, decyzje na
+ *        skrzyżowaniach, gwarancja braku nakładania pojazdów.
+ *
+ * Obejmuje klasę bazową @ref SimulationObject, jej pochodną @ref Car
+ * (z geometrią ruchu na rondzie w strukturze @ref RbState) oraz
+ * @ref SimulationEngine, który spina wszystko w pętli @c update(dt):
+ * fazy świateł, zasady ruchu, ruch obiektów, rozsuwanie kolizji,
+ * usuwanie aut poza mapą, podtrzymywanie zadanego natężenia.
+ *
+ * Stałe geometryczne mapy znajdują się w @ref RoadGeometry.h, a stałe
+ * fizyczne (prędkości, dystans bezpieczny, czasy faz świateł) — w
+ * @c PhysicsConstants.h.
+ */
+
+/**
+ * @defgroup routing_grp Wyznaczanie tras (nawigacja GPS)
+ * @brief Graf dróg, algorytm A\*, analiza korków, menedżer nawigacji,
+ *        sanitizer wizualizacji trasy.
+ *
+ * Najważniejsze klasy:
+ *  - @ref DynamicPathfinder — implementacja A\* na grafie 96-węzłowym
+ *    (64 skrzyżowania + 32 checkpointy); stan = (węzeł, kierunek wjazdu)
+ *    zabrania zawracania.
+ *  - @ref TrafficAnalyzer — co kilka sekund liczy auta na każdym
+ *    skierowanym odcinku, dostarcza koszt korka do A\*.
+ *  - @ref RouteManager — uruchamia SmartCar, cyklicznie przelicza trasę
+ *    od aktualnej pozycji (recalc), dostarcza intencję skrętu do silnika.
+ *  - @ref VisualRouteBuilder + @ref RoutePolylineSanitizer — zamiana
+ *    sekwencji kroków na polilinię GPS i usuwanie artefaktów.
+ */
+
+/**
+ * @defgroup gui_grp Interfejs użytkownika
+ * @brief Okna Qt, pliki @c .ui (Qt Designer), widżety niestandardowe.
+ *
+ * Główne klasy:
+ *  - @ref MainWindow — ładuje @c ui/main_window.ui, podpina sygnały,
+ *    trzyma silnik symulacji i menedżer nawigacji.
+ *  - @ref SimulationView — promowany widżet z @c .ui, rysuje mapę
+ *    z motywem, obsługuje zoom/pan, klikanie checkpointów, drag HUD-a.
+ *  - @ref SideMenu — animowana nakładka boczna (@c ui/side_menu.ui)
+ *    ze sterowaniem (suwak prędkości, motyw, mapa korków, nawigacja).
+ *  - @c StartScreen — pełnoekranowy ekran startowy z animowanym
+ *    rysowaniem QPainter (cząstki, klikalne prostokąty).
+ *
+ * Wszystkie statyczne układy zdefiniowane są w plikach @c ui/*.ui
+ * (Qt Designer); kod tylko podpina sygnały i aktualizuje wartości.
+ */
+
+/**
+ * @defgroup tests_grp Testy weryfikacyjne
+ * @brief Aplikacja @c EasyRiderTests: 51 testów w 10 kategoriach,
+ *        model attempt-based z kamieniami milowymi i raportami dowodowymi.
+ *
+ * Najważniejsze klasy/typy:
+ *  - @ref TestWindow — runner GUI; ładuje @c ui/test_window.ui.
+ *  - @c HeadlessRunner — tryb konsolowy (@c --headless N).
+ *  - @ref TestCategoryCard, @ref TestRow — szablony widoku listy.
+ *  - @ref TestPreviewView — podgląd symulacji obok diagnostyki.
+ *  - @c TestFramework.h — typy: @c TestCase, @c AttemptResult,
+ *    @c Milestone, @c EvidenceReport oraz statusy
+ *    (@c Passed/@c Failed/@c Unverified/@c Timeout).
+ */

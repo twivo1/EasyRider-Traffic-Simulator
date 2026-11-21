@@ -1,0 +1,119 @@
+# ═══════════════════════════════════════════════════════════════════════
+#  Konfiguracja Doxygen dla projektu EasyRider
+#  Uruchomienie:    doxygen Doxyfile
+#  Wynik:           docs/html/index.html
+#  Wymagania:       doxygen, graphviz (do diagramów klas)
+# ═══════════════════════════════════════════════════════════════════════
+
+# ── Projekt ──────────────────────────────────────────────────────────
+PROJECT_NAME           = "EasyRider"
+PROJECT_BRIEF          = "Symulacja ruchu drogowego z nawigacją GPS (A*)"
+OUTPUT_DIRECTORY       = docs
+OUTPUT_LANGUAGE        = Polish
+
+# ── Wejście ──────────────────────────────────────────────────────────
+INPUT                  = main.cpp \
+                         src \
+                         tests \
+                         docs/groups.dox \
+                         docs/architecture.dox
+FILE_PATTERNS          = *.h *.cpp *.dox
+RECURSIVE              = YES
+INPUT_ENCODING         = UTF-8
+
+# ── Wykluczenia (wygenerowane pliki Qt / katalogi buildu / dev tools) ─
+EXCLUDE                = build build_baseline docs/html
+EXCLUDE_PATTERNS       = */build/* \
+                         */build_baseline/* \
+                         */moc_*.cpp \
+                         */ui_*.h \
+                         */qrc_*.cpp \
+                         */CMakeFiles/* \
+                         */.git/* \
+                         */__pycache__/*
+
+# ── Co ekstrahować ───────────────────────────────────────────────────
+# Zachowawcza ekstrakcja: tylko udokumentowane jednostki + publiczne
+# klasy (prywatne pomijamy, by uniknąć szumu) — czystsza dokumentacja.
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_PACKAGE        = NO
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_ANON_NSPACES   = NO
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+HIDE_FRIEND_COMPOUNDS  = YES
+
+# ── Styl komentarzy ──────────────────────────────────────────────────
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = YES
+MULTILINE_CPP_IS_BRIEF = NO
+INHERIT_DOCS           = YES
+SEPARATE_MEMBER_PAGES  = NO
+TAB_SIZE               = 4
+
+# Markdown / typedef / language tweaks
+MARKDOWN_SUPPORT       = YES
+TOC_INCLUDE_HEADINGS   = 4
+BUILTIN_STL_SUPPORT    = YES
+OPTIMIZE_OUTPUT_FOR_C  = NO
+OPTIMIZE_OUTPUT_JAVA   = NO
+TYPEDEF_HIDES_STRUCT   = NO
+
+# Sortowanie i nazwy
+SORT_MEMBER_DOCS       = YES
+SORT_BRIEF_DOCS        = NO
+SORT_GROUP_NAMES       = NO
+SORT_BY_SCOPE_NAME     = NO
+FULL_PATH_NAMES        = NO
+
+# ── Diagnostyka ──────────────────────────────────────────────────────
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+
+# ── Wynik: HTML ──────────────────────────────────────────────────────
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+HTML_DYNAMIC_SECTIONS  = YES
+GENERATE_TREEVIEW      = YES
+DISABLE_INDEX          = NO
+SEARCHENGINE           = YES
+
+# Przeglądarka źródeł — przydatna do recenzji
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+REFERENCED_BY_RELATION = NO
+REFERENCES_RELATION    = NO
+VERBATIM_HEADERS       = YES
+
+# ── Diagramy (UML / klas / współpracy) ───────────────────────────────
+HAVE_DOT               = YES
+DOT_NUM_THREADS        = 2
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+GROUP_GRAPHS           = YES
+UML_LOOK               = YES
+UML_LIMIT_NUM_FIELDS   = 12
+TEMPLATE_RELATIONS     = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = NO
+# Wyłączam call/caller graph — zbyt zaszumiony dla projektu z Qt.
+CALL_GRAPH             = NO
+CALLER_GRAPH           = NO
+GRAPHICAL_HIERARCHY    = YES
+DIRECTORY_GRAPH        = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+DOT_MULTI_TARGETS      = YES
+GENERATE_LEGEND        = YES
+DOT_CLEANUP            = YES
+# Ograniczenie złożoności pojedynczego diagramu (pojedyncze klasy ok,
+# automatyczne tworzenie monstrualnych grafów dziedziczenia — nie).
+DOT_GRAPH_MAX_NODES    = 60
+MAX_DOT_GRAPH_DEPTH    = 0

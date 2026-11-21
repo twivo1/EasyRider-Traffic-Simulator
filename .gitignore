@@ -1,0 +1,75 @@
+# ── Katalogi budowania (CMake / Qt Creator / ręczne) ─────────────────
+# Uwaga: build/ zawiera też kopie bezpieczeństwa i logi audytu
+# (build/audit-orig, build/visual-baseline, build/recovery-*, *.log) —
+# pozostają na dysku, ale nie trafiają do repozytorium.
+/build/
+/build-*/
+/out/
+/cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+_deps/
+compile_commands.json
+*_autogen/
+.qt/
+.rcc/
+
+# ── Pliki użytkownika IDE (zawierają ścieżki lokalne) ────────────────
+CMakeLists.txt.user
+CMakeLists.txt.user.*
+*.pro.user
+*.pro.user.*
+.qtcreator/
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln.docstates
+
+# ── Artefakty kompilacji i wykonywalne ───────────────────────────────
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.dylib
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.moc
+
+# ── Logi, wyniki testów, pliki tymczasowe ────────────────────────────
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+gui_check_out/
+
+# ── Dokumentacja generowana (Doxygen: OUTPUT_DIRECTORY = docs) ───────
+/docs/html/
+/docs/latex/
+/docs/xml/
+
+# ── Pliki binarne niewymagane do budowania ───────────────────────────
+# Skrót Windows (zawiera ścieżki bezwzględne do lokalnego dysku).
+*.lnk
+# Grafiki ikon: nie są używane przez CMake ani controls.qrc (używa .xpm).
+# Pozostają na dysku; dodaj świadomie (git add -f) lub przez Git LFS.
+/assets/*.png
+/assets/*.ico

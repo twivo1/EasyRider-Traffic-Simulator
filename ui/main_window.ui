@@ -1,0 +1,176 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="rootLayout" stretch="1,0">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <layout class="QHBoxLayout" name="mainContentLayout" stretch="1,0">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="SimulationView" name="view" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <horstretch>1</horstretch>
+          <verstretch>1</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>400</width>
+          <height>300</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="SideMenu" name="sideMenu" native="true" />
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QFrame" name="infoBar">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>36</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>36</height>
+       </size>
+      </property>
+      <layout class="QHBoxLayout" name="infoBarLayout">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <property name="leftMargin">
+        <number>10</number>
+       </property>
+       <property name="topMargin">
+        <number>4</number>
+       </property>
+       <property name="rightMargin">
+        <number>10</number>
+       </property>
+       <property name="bottomMargin">
+        <number>4</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="hintLabel">
+         <property name="text">
+          <string>EasyRider</string>
+         </property>
+         <property name="styleSheet">
+          <string>font-weight:600;</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelSimStatus">
+         <property name="text">
+          <string>Symulacja zatrzymana</string>
+         </property>
+         <property name="styleSheet">
+          <string>color:#24292B; background:transparent;</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelRouteStatus">
+         <property name="text">
+          <string>Trasa: —</string>
+         </property>
+         <property name="styleSheet">
+          <string>color:#24292B; background:transparent;</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="infoBarSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="statsLabel">
+         <property name="styleSheet">
+          <string>color:#24292B; background:transparent;</string>
+         </property>
+         <property name="text">
+          <string />
+         </property>
+        </widget>
+       </item>
+      </layout>
+      <property name="styleSheet">
+       <string>QFrame#infoBar { background:#FFFFFF; border:1px solid #D0CEC8; border-radius:2px; }</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <property name="minimumSize">
+   <size>
+    <width>960</width>
+    <height>600</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>EasyRider — Symulacja ruchu</string>
+  </property>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SimulationView</class>
+   <extends>QWidget</extends>
+   <header>gui/SimulationView.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SideMenu</class>
+   <extends>QWidget</extends>
+   <header>gui/SideMenu.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

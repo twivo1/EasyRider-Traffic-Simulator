@@ -1,0 +1,243 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ui version="4.0">
+ <class>TestPreviewView</class>
+ <widget class="QWidget" name="TestPreviewView">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>720</width>
+    <height>400</height>
+   </rect>
+  </property>
+  <layout class="QHBoxLayout" name="previewLayout">
+   <property name="spacing">
+    <number>10</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QScrollArea" name="diagnosticScroll">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <property name="horizontalScrollBarPolicy">
+      <enum>Qt::ScrollBarAlwaysOff</enum>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>200</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>200</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <widget class="QWidget" name="leftCol" native="true">
+      <layout class="QVBoxLayout" name="leftColLayout">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QFrame" name="diagCard">
+         <layout class="QVBoxLayout" name="diagCardLayout">
+          <property name="spacing">
+           <number>6</number>
+          </property>
+          <property name="leftMargin">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <property name="rightMargin">
+           <number>10</number>
+          </property>
+          <property name="bottomMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="diagHeader">
+            <property name="text">
+             <string>TRYB DIAGNOSTYCZNY</string>
+            </property>
+            <property name="styleSheet">
+             <string>color:#242424; background:transparent;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="diagBody">
+            <property name="text">
+             <string>— brak aktywnej próby —</string>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::RichText</enum>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+            <property name="styleSheet">
+             <string>color:#242424; background:transparent;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="diagStretch">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>10</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+         <property name="styleSheet">
+          <string>QFrame#diagCard { background:#F8F7F4; border:1px solid #D0CEC8; border-radius:2px; }</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QFrame" name="setCard">
+         <layout class="QVBoxLayout" name="setCardLayout">
+          <property name="spacing">
+           <number>6</number>
+          </property>
+          <property name="leftMargin">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <property name="rightMargin">
+           <number>10</number>
+          </property>
+          <property name="bottomMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="setHeader">
+            <property name="text">
+             <string>UKŁAD</string>
+            </property>
+            <property name="styleSheet">
+             <string>color:#242424; background:transparent;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="countersBody">
+            <property name="text">
+             <string />
+            </property>
+            <property name="textFormat">
+             <enum>Qt::RichText</enum>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+            <property name="styleSheet">
+             <string>color:#242424; background:transparent;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="setStretch">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>10</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+         <property name="styleSheet">
+          <string>QFrame#setCard { background:#F8F7F4; border:1px solid #D0CEC8; border-radius:2px; }</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="leftColStretch">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>10</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="TestSimulationCanvas" name="canvas" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>1</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+    </widget>
+   </item>
+  </layout>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>280</height>
+   </size>
+  </property>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TestSimulationCanvas</class>
+   <extends>QWidget</extends>
+   <header>TestPreviewView.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

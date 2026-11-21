@@ -1,0 +1,604 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ui version="4.0">
+ <class>TestWindow</class>
+ <widget class="QMainWindow" name="TestWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1280</width>
+    <height>780</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>EasyRider — Testy</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="rootLayout" stretch="0,0,1,0,0">
+    <property name="spacing">
+     <number>10</number>
+    </property>
+    <property name="leftMargin">
+     <number>10</number>
+    </property>
+    <property name="topMargin">
+     <number>10</number>
+    </property>
+    <property name="rightMargin">
+     <number>10</number>
+    </property>
+    <property name="bottomMargin">
+     <number>10</number>
+    </property>
+    <item>
+     <layout class="QHBoxLayout" name="headerRow">
+      <item>
+       <layout class="QVBoxLayout" name="headerLeft">
+        <property name="spacing">
+         <number>2</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="titleLabel">
+          <property name="text">
+           <string>EasyRider</string>
+          </property>
+          <property name="styleSheet">
+           <string>font-size:15px; font-weight:600;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="subLabel">
+          <property name="text">
+           <string>Zestaw testów weryfikacyjnych  ·  10 kategorii  ·  51 testów</string>
+          </property>
+          <property name="styleSheet">
+           <string>color:#242424; background:transparent;</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="headerSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="cardsRow">
+      <property name="spacing">
+       <number>10</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="passCard">
+        <property name="text">
+         <string>&lt;div style='line-height:1.15'&gt;&lt;span style='font-size:14px;font-weight:700;color:#16a34a'&gt;0&lt;/span&gt;  &lt;span style='font-size:11px;color:#78716c;letter-spacing:0.4px'&gt;ZALICZONE&lt;/span&gt;&lt;/div&gt;</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string>background:transparent; color:#242424;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="failCard">
+        <property name="text">
+         <string>&lt;div style='line-height:1.15'&gt;&lt;span style='font-size:14px;font-weight:700;color:#dc2626'&gt;0&lt;/span&gt;  &lt;span style='font-size:11px;color:#78716c;letter-spacing:0.4px'&gt;NIEZALICZONE&lt;/span&gt;&lt;/div&gt;</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string>background:transparent; color:#242424;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="pendCard">
+        <property name="text">
+         <string>&lt;div style='line-height:1.15'&gt;&lt;span style='font-size:14px;font-weight:700;color:#92400e'&gt;0&lt;/span&gt;  &lt;span style='font-size:11px;color:#78716c;letter-spacing:0.4px'&gt;DO URUCHOMIENIA&lt;/span&gt;&lt;/div&gt;</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string>background:transparent; color:#242424;</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="splitRow">
+      <property name="spacing">
+       <number>10</number>
+      </property>
+      <item>
+       <widget class="QScrollArea" name="listScroll">
+        <property name="widgetResizable">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="listContents">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>438</width>
+           <height>600</height>
+          </rect>
+         </property>
+         <layout class="QVBoxLayout" name="listContentsLayout">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>2</number>
+          </property>
+          <property name="topMargin">
+           <number>2</number>
+          </property>
+          <property name="rightMargin">
+           <number>10</number>
+          </property>
+          <property name="bottomMargin">
+           <number>2</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="listPlaceholder">
+            <property name="text">
+             <string>Lista kategorii i testów — karty (szablon: ui/widgets/test_category_card.ui) oraz wiersze (ui/widgets/test_row.ui) są wypełniane dynamicznie z danych w buildTestList().</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+            <property name="styleSheet">
+             <string>color:#242424; background:transparent;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="listSpacer">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>400</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+        <property name="minimumSize">
+         <size>
+          <width>290</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>330</width>
+          <height>16777215</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="rightColumn" stretch="1,0">
+        <property name="spacing">
+         <number>10</number>
+        </property>
+        <item>
+         <widget class="QFrame" name="previewCard">
+          <property name="frameShape">
+           <enum>QFrame::StyledPanel</enum>
+          </property>
+          <layout class="QVBoxLayout" name="previewCardLayout" stretch="0,1">
+           <property name="spacing">
+            <number>8</number>
+           </property>
+           <property name="leftMargin">
+            <number>10</number>
+           </property>
+           <property name="topMargin">
+            <number>10</number>
+           </property>
+           <property name="rightMargin">
+            <number>10</number>
+           </property>
+           <property name="bottomMargin">
+            <number>10</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="previewHeader">
+             <property name="styleSheet">
+              <string>color:#242424; background:transparent;</string>
+             </property>
+             <property name="text">
+              <string>Podgląd symulacji</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="TestPreviewView" name="preview" native="true">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>260</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+          </layout>
+          <property name="styleSheet">
+           <string>QFrame#previewCard { background:#F8F7F4; border:1px solid #D0CEC8; border-radius:2px; }</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QScrollArea" name="detailScroll">
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <property name="horizontalScrollBarPolicy">
+           <enum>Qt::ScrollBarAlwaysOff</enum>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>130</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>210</height>
+           </size>
+          </property>
+          <widget class="QFrame" name="detailCard">
+           <property name="frameShape">
+            <enum>QFrame::StyledPanel</enum>
+           </property>
+           <layout class="QVBoxLayout" name="detailCardLayout">
+            <property name="spacing">
+             <number>6</number>
+            </property>
+            <property name="leftMargin">
+             <number>10</number>
+            </property>
+            <property name="topMargin">
+             <number>10</number>
+            </property>
+            <property name="rightMargin">
+             <number>10</number>
+            </property>
+            <property name="bottomMargin">
+             <number>10</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="curCat">
+              <property name="text">
+               <string>KATEGORIA</string>
+              </property>
+              <property name="styleSheet">
+               <string>color:#242424; background:transparent;</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="curTitle">
+              <property name="text">
+               <string>Wybierz lub uruchom testy</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+              <property name="styleSheet">
+               <string>font-size:15px; font-weight:600;</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="curDesc">
+              <property name="text">
+               <string>Po uruchomieniu zobaczysz tu opis sprawdzanej funkcjonalności oraz wynik wraz ze szczegółami.</string>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+              <property name="styleSheet">
+               <string>color:#242424; background:transparent;</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="statusRow">
+              <property name="topMargin">
+               <number>8</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="curStatus">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>28</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>28</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Oczekuje</string>
+                </property>
+                <property name="styleSheet">
+                 <string>color:#242424; background:transparent;</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="statusSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QLabel" name="curDetail">
+              <property name="text">
+               <string />
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+              <property name="styleSheet">
+               <string>color:#242424; background:transparent;</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="evidenceTitle">
+              <property name="text">
+               <string>RAPORT DOWODOWY</string>
+              </property>
+              <property name="styleSheet">
+               <string>color:#242424; background:transparent;</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="evidenceText">
+              <property name="text">
+               <string />
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::TextSelectableByMouse</set>
+              </property>
+              <property name="styleSheet">
+               <string>color:#242424; background:transparent;</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+           <property name="styleSheet">
+            <string>QFrame#detailCard { background:#F8F7F4; border:1px solid #D0CEC8; border-radius:2px; }</string>
+           </property>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QLabel" name="legendLabel">
+      <property name="text">
+       <string>&lt;span style='color:#d6d3d1; font-weight:700'&gt;•&lt;/span&gt; Oczekuje &amp;nbsp;&amp;nbsp;&lt;span style='color:#f59e0b; font-weight:700'&gt;◐&lt;/span&gt; Trwa &amp;nbsp;&amp;nbsp;&lt;span style='color:#16a34a; font-weight:800'&gt;✓&lt;/span&gt; Zaliczony &amp;nbsp;&amp;nbsp;&lt;span style='color:#b45309; font-weight:800'&gt;◌&lt;/span&gt; Niezweryfikowany &amp;nbsp;&amp;nbsp;&lt;span style='color:#dc2626; font-weight:800'&gt;✗&lt;/span&gt; Niezaliczony</string>
+      </property>
+      <property name="styleSheet">
+       <string>color:#242424; background:transparent;</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="footerRow">
+      <item>
+       <widget class="QPushButton" name="runBtn">
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>240</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Uruchom wszystkie testy</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="cancelBtn">
+        <property name="visible">
+         <bool>false</bool>
+        </property>
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>180</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>34</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>⏹  Anuluj testy</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="progressBox">
+        <property name="spacing">
+         <number>4</number>
+        </property>
+        <item>
+         <spacer name="progTop">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>10</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progress">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>8</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>8</height>
+           </size>
+          </property>
+          <property name="value">
+           <number>0</number>
+          </property>
+          <property name="textVisible">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="progressLabel">
+          <property name="text">
+           <string>0 / 0</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="styleSheet">
+           <string>color:#242424; background:transparent;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="progBottom">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>10</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TestPreviewView</class>
+   <extends>QWidget</extends>
+   <header>TestPreviewView.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources />
+ <connections />
+</ui>

@@ -1,0 +1,123 @@
+/**
+ * @file architecture.dox
+ * @brief Strona dokumentacji z diagramem architektury projektu.
+ */
+
+/**
+ * @page architektura_diagram Architektura — diagram tekstowy
+ *
+ * @section warstwy Warstwy zależności
+ *
+ * @code{.unparsed}
+ *  ┌─────────────────────────────────────────────────────────────┐
+ *  │  GUI (Qt Widgets + Qt Designer .ui)                         │
+ *  │                                                             │
+ *  │    MainWindow ──► SimulationView (rysuje mapę + auta)       │
+ *  │      │             ▲                                        │
+ *  │      │ owns        │ promoted widget z ui/main_window.ui    │
+ *  │      ▼             │                                        │
+ *  │    SideMenu (animowana nakładka, ui/side_menu.ui)           │
+ *  │    StartScreen (pełny QPainter overlay)                     │
+ *  └────────────────────────┬────────────────────────────────────┘
+ *                           │
+ *                           ▼   wywołania publicznych metod
+ *  ┌─────────────────────────────────────────────────────────────┐
+ *  │  NAV (src/nav/)                                             │
+ *  │                                                             │
+ *  │    RouteManager ──► DynamicPathfinder  (A*)                 │
+ *  │      │              TrafficAnalyzer    (koszty korków)      │
+ *  │      ▼              VisualRouteBuilder (polilinia)          │
+ *  │    SmartCarIntentFn ────► silnik (callback)                 │
+ *  │      RoutePolylineSanitizer (czyszczenie artefaktów)        │
+ *  └────────────────────────┬────────────────────────────────────┘
+ *                           │
+ *                           ▼
+ *  ┌─────────────────────────────────────────────────────────────┐
+ *  │  CORE (src/core/)                                           │
+ *  │                                                             │
+ *  │    SimulationEngine                                         │
+ *  │      ├── std::vector<unique_ptr<SimulationObject>>          │
+ *  │      │      ▲                                               │
+ *  │      │      └── Car  (z RbState dla jazdy na rondzie)       │
+ *  │      ├── m_iState[8][8] — stan każdego skrzyżowania         │
+ *  │      └── update(dt): 6-stopniowa klatka                     │
+ *  │                                                             │
+ *  │    RoadGeometry.h (constexpr) / Roundabout.h / Physics      │
+ *  └─────────────────────────────────────────────────────────────┘
+ * @endcode
+ *
+ * @section dwa_cele Dwa cele kompilacji
+ *
+ * @code{.unparsed}
+ *  EasyRider          (main.cpp + src/ + ui/main_window.ui + ui/side_menu.ui)
+ *      └── MainWindow ─ SimulationView ─ SideMenu ─ StartScreen
+ *
+ *  EasyRiderTests     (tests/ + udostępniony src/core, src/nav)
+ *      ├── (GUI)      TestWindow ── TestCategoryCard ── TestRow
+ *      │                          └── TestPreviewView ── TestSimulationCanvas
+ *      └── (CLI)      HeadlessRunner   uruchamiany z --headless N
+ * @endcode
+ *
+ * @section pliki_ui Pliki .ui (Qt Designer)
+ *
+ * @code{.unparsed}
+ *  ui/main_window.ui                  ◀ MainWindow + promowany SimulationView
+ *  ui/side_menu.ui                    ◀ SideMenu (panel sterowania)
+ *  ui/test_window.ui                  ◀ TestWindow (runner)
+ *  ui/widgets/test_preview_view.ui    ◀ TestPreviewView (podgląd + canvas)
+ *  ui/widgets/test_category_card.ui   ◀ TestCategoryCard (szablon)
+ *  ui/widgets/test_row.ui             ◀ TestRow (szablon wiersza testu)
+ * @endcode
+ */
+
+/**
+ * @page architektura_gui Pliki .ui i widżety promowane
+ *
+ * Statyczna struktura interfejsu znajduje się w plikach @c ui/*.ui;
+ * @c uic generuje z nich nagłówki @c ui_*.h. Każde okno tylko ładuje
+ * UI (@c ui->setupUi(this)) i podpina sygnały.
+ *
+ * @section main_ui main_window.ui
+ *  - @c view — promowany @ref SimulationView (główne płótno),
+ *  - @c controlPanel — statyczna reprezentacja kontrolek na czas
+ *    podglądu w Designerze (w runtime ukrywany; sterowaniem zajmuje
+ *    się animowana nakładka @ref SideMenu),
+ *  - @c infoBar — dolny pasek statusu: @c hintLabel, @c labelSimStatus
+ *    (aktualizowany co klatkę), @c labelRouteStatus, @c statsLabel.
+ *
+ * @section side_ui side_menu.ui
+ *  - kontrolki @ref SideMenu suwak prędkości, lista motywów, mapa
+ *    korków (checkable), „Wyznacz trasę"/„Anuluj trasę",
+ *    statystyki nawigacji, „Powrót do menu".
+ *
+ * @section test_ui test_window.ui
+ *  - nagłówek, karty „Zaliczone/Niezaliczone/Do uruchomienia",
+ *    scroll listy kategorii i testów (dynamicznie wypełniany),
+ *    karta podglądu na żywo z promowanym @c TestPreviewView,
+ *    panel szczegółów (kategoria, nazwa, opis, status, raport
+ *    dowodowy), „Uruchom/Anuluj testy", pasek postępu.
+ *
+ * @section widzety_promowane Widżety promowane
+ *
+ * @code{.unparsed}
+ *  Placeholder w .ui          Klasa docelowa           Nagłówek
+ *  ─────────────────────────  ───────────────────────  ─────────────────────────
+ *  view  (main_window.ui)     SimulationView           gui/SimulationView.h
+ *  preview (test_window.ui)   TestPreviewView          TestPreviewView.h
+ *  canvas (test_preview_view) TestSimulationCanvas     TestPreviewView.h
+ * @endcode
+ *
+ * @section dynamiczne Co pozostaje dynamiczne i dlaczego
+ *  - Lista kategorii i testów w @ref TestWindow — liczba zależy od
+ *    danych (51 testów × 10 kategorii); kontener (QScrollArea) jest
+ *    w @c .ui, a instancje @ref TestCategoryCard i @ref TestRow tworzy
+ *    @c buildTestList().
+ *  - Lista motywów w @ref SideMenu — kod wstrzykuje pozycje z
+ *    @c allThemes() do gotowego @c QComboBox.
+ *  - Etykiety paska statusu (@c labelSimStatus, @c labelRouteStatus) —
+ *    sam widżet jest w @c .ui, treść aktualizuje
+ *    @c MainWindow::updateBottomStatus i @c tick().
+ *  - Ekran startowy @c StartScreen — całość rysowana w QPainter
+ *    (animowane cząstki, klikalne prostokąty); nie da się tego
+ *    wyrazić layoutem Designera.
+ */
