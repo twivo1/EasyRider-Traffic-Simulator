@@ -1,6 +1,7 @@
 #include "SimMonitor.h"
 #include "SimulationEngine.h"
 #include "Car.h"
+#include "PhysicsConstants.h"
 #include <cmath>
 #include <algorithm>
 #include <array>
@@ -153,7 +154,9 @@ void SimMonitor::observe(const SimulationEngine& engine, double dt) {
         // I3 — ciągłość położenia
         const QPointF d = k.c - p.c;
         const double dist = std::hypot(d.x(), d.y());
-        const double allowed = std::max(p.speed, k.v) * dt * 1.05 + 0.3;
+        // Między próbkami auto może przyspieszyć i zahamować (np. przy pominiętym
+        // ticku w GUI, dt = 0,128 s) — górna granica obejmuje ½·a_max·dt².
+        const double allowed = std::max(p.speed, k.v) * dt * 1.05 + 0.5 * kAccel * dt * dt + 0.3;
         if (dist > allowed) {
             m_s.teleports++;
             m_s.maxExcessJump = std::max(m_s.maxExcessJump, dist - allowed);
