@@ -1,0 +1,21 @@
+[Setup]
+AppId=twivo1.EasyRider.TrafficSimulator
+AppName=EasyRider
+AppVersion=@PROJECT_VERSION@
+DefaultDirName={localappdata}\Programs\EasyRider
+DefaultGroupName=EasyRider
+InfoBeforeFile={#Stage}\licenses\Runtime-notices.txt
+DisableProgramGroupPage=yes
+PrivilegesRequired=lowest
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+UninstallDisplayIcon={app}\EasyRider.exe
+OutputBaseFilename=EasyRider-Setup-@PROJECT_VERSION@-win64
+Compression=lzma2
+SolidCompression=yes
+
+[Files]
+Source: "{#Stage}\*"; DestDir: "{app}"; Flags: recursesubdirs ignoreversion
+
+[Icons]
+Name: "{group}\EasyRider"; Filename: "{app}\EasyRider.exe"; WorkingDir: "{app}"

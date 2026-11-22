@@ -1,0 +1,106 @@
+name: Windows Release
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build:
+    name: Release build, mechanics and packaging
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - &checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - &kit
+        name: Install Qt 6.9.3 and its x64 GCC 13.1 toolchain
+        run: |
+          python -m pip install aqtinstall==3.3.0
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          $root = "$env:RUNNER_TEMP/qt-kit"
+          python -m aqt install-qt windows desktop 6.9.3 win64_mingw -O $root
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m aqt install-tool windows desktop tools_mingw1310 qt.tools.win64_mingw1310 -O $root
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          "$root/Tools/mingw1310_64/bin" >> $env:GITHUB_PATH
+          "$root/6.9.3/mingw_64/bin" >> $env:GITHUB_PATH
+      - &configure
+        name: Configure Release
+        run: |
+          cmake -S . -B build/release -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_CXX_COMPILER=$env:RUNNER_TEMP/qt-kit/Tools/mingw1310_64/bin/g++.exe" "-DCMAKE_PREFIX_PATH=$env:RUNNER_TEMP/qt-kit/6.9.3/mingw_64"
+      - name: Build simulator and mechanics tests
+        run: cmake --build build/release --parallel 4 --target EasyRider EasyRiderTests
+      - name: Run headless mechanics suite
+        run: |
+          ./build/release/EasyRiderTests.exe --headless 1 | Tee-Object build/release/mechanics.log
+          exit $LASTEXITCODE
+      - name: Generate per-user installer
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe")) {
+            choco install innosetup --version=6.7.1 -y --no-progress
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
+          ./packaging/windows/package.ps1 -BuildDir build/release
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: EasyRider-win64
+          path: |
+            build/release/installer/EasyRider-Setup-*-win64.exe
+            build/release/installer/qtbase-everywhere-src-6.9.3.tar.xz
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: failure()
+        with:
+          name: build-diagnostics
+          path: |
+            build/release/mechanics.log
+            build/release/CMakeFiles/CMakeConfigureLog.yaml
+
+  install:
+    name: Install, launch and uninstall on a fresh runner
+    needs: build
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - *checkout
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: EasyRider-win64
+          path: installer
+      - name: Verify installed application
+        run: |
+          $files = @(Get-ChildItem installer/*.exe)
+          if ($files.Count -ne 1) { throw 'Expected one installer' }
+          ./packaging/windows/test-install.ps1 -Setup $files[0].FullName
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: installation-logs
+          path: build/installer-test
+  gui:
+    name: Real GUI and rendering checks
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - *checkout
+      - *kit
+      - *configure
+      - name: Build GUI checker
+        run: cmake --build build/release --parallel 4 --target EasyRiderGuiCheck
+      - name: Run GUI scenarios
+        run: |
+          ./build/release/EasyRiderGuiCheck.exe build/gui-report | Out-Host
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: gui-report
+          path: build/gui-report

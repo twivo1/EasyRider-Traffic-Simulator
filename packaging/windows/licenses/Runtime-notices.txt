@@ -1,0 +1,14 @@
+EasyRider loads Qt 6.9.3 Core, Gui and Widgets and their Windows plugins as
+separate, replaceable DLLs under LGPL version 3. The installed licenses
+directory includes the LGPL, GPL, the Qt Base SPDX bill of materials (including
+third-party notices), and the MinGW runtime notices and GCC runtime exception.
+Users may replace the libraries and reverse engineer the application for
+debugging modifications to those libraries.
+
+The EasyRider-win64 download includes qtbase-everywhere-src-6.9.3.tar.xz
+alongside the installer. Keep both files available when redistributing.
+
+Upstream source:
+Qt Base 6.9.3: https://download.qt.io/archive/qt/6.9/6.9.3/submodules/qtbase-everywhere-src-6.9.3.tar.xz
+GCC 13.1.0: https://ftp.gnu.org/gnu/gcc/gcc-13.1.0/
+MinGW-w64 (including winpthreads): https://www.mingw-w64.org/downloads/
