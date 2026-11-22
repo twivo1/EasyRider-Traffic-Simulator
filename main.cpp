@@ -94,6 +94,9 @@
  */
 #include "gui/MainWindow.h"
 #include <QApplication>
+#include <QPixmap>
+#include <QTimer>
+#include <QWindow>
 #include "gui/UiStyle.h"
 
 int main(int argc, char *argv[])
@@ -102,5 +105,14 @@ int main(int argc, char *argv[])
     UiStyle::apply(a);
     MainWindow w;
     w.showFullScreen();   // od razu na pełnym ekranie
+    if (a.arguments().contains(QStringLiteral("--installation-check"))) {
+        QTimer::singleShot(1800, &w, [&] {
+            const bool ready = w.isVisible() && w.windowHandle() && w.windowHandle()->isExposed()
+                            && !QPixmap(":/controls/up.xpm").isNull() && !QPixmap(":/controls/down.xpm").isNull();
+            if (!ready) qCritical("Installation check failed: window exposure or embedded controls");
+            w.close();
+            a.exit(ready ? 0 : 1);
+        });
+    }
     return a.exec();
 }

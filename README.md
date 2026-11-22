@@ -72,6 +72,20 @@ cmake --build build/local --parallel
 
 In the Polish-language interface, choose a theme, accept the map and start traffic. Select **Wyznacz trasę** to pick the two endpoints. **Mapa korków** toggles the heatmap.
 
+### Windows installer
+
+With the Qt 6.9.3 MinGW x64 kit, GCC 13.1 and Inno Setup 6 installed on the build machine,
+run the following after the Release build above. The packaging script uses the Qt kit and compiler
+recorded by CMake. It downloads and verifies the matching Qt Base source archive for redistribution.
+
+```powershell
+.\packaging\windows\package.ps1 -BuildDir build/local
+```
+
+The installer and Qt source archive are written to `build/local/installer/`. Run the installer to
+install EasyRider for the current user and launch it from the Start menu. The installed application
+includes its Qt and MinGW runtime libraries. Remove it from the Apps page in Windows Settings.
+
 ## Testing
 
 Run these commands from the same PowerShell session after building.

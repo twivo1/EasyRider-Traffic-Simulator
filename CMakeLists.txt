@@ -177,3 +177,8 @@ if(Qt6Test_FOUND)
     target_include_directories(EasyRiderGuiCheck PRIVATE src)
     target_link_libraries(EasyRiderGuiCheck PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Test)
 endif()
+
+if(WIN32 AND MINGW)
+    install(TARGETS EasyRider RUNTIME DESTINATION .)
+    configure_file(packaging/windows/EasyRider.iss.in EasyRider.iss @ONLY)
+endif()
